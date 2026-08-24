@@ -75,99 +75,129 @@ function drawCell(cell) {
     }
 }
 
+function generateMaze() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-function getUnvisitedNeighbors(cell) {
-    const neighbors = [];
+    const cols = Math.ceil(canvas.width / cellSize);
+    const rows = Math.ceil(canvas.height / cellSize);
 
-    const row = cell.row;
-    const col = cell.col;
+    const grid = [];
 
-    const top = row > 0 ? grid[row - 1][col] : null;
-    const right = col < cols - 1 ? grid[row][col + 1] : null;
-    const bottom = row < rows - 1 ? grid[row + 1][col] : null;
-    const left = col > 0 ? grid[row][col - 1] : null;
+    for (let row = 0; row < rows; row++) {
+        const currentRow = [];
 
-    if (top && !top.visited) {
-        neighbors.push(top);
+        for (let col = 0; col < cols; col++) {
+            const cell = {
+                row: row,
+                col: col,
+                visited: false,
+
+                walls: {
+                    top: true,
+                    right: true,
+                    bottom: true,
+                    left: true
+                }
+            };
+
+            currentRow.push(cell);
+        }
+
+        grid.push(currentRow);
     }
 
-    if (right && !right.visited) {
-        neighbors.push(right);
+    function getUnvisitedNeighbors(cell) {
+        const neighbors = [];
+
+        const row = cell.row;
+        const col = cell.col;
+
+        const top = row > 0 ? grid[row - 1][col] : null;
+        const right = col < cols - 1 ? grid[row][col + 1] : null;
+        const bottom = row < rows - 1 ? grid[row + 1][col] : null;
+        const left = col > 0 ? grid[row][col - 1] : null;
+
+        if (top && !top.visited) neighbors.push(top);
+        if (right && !right.visited) neighbors.push(right);
+        if (bottom && !bottom.visited) neighbors.push(bottom);
+        if (left && !left.visited) neighbors.push(left);
+
+        return neighbors;
     }
 
-    if (bottom && !bottom.visited) {
-        neighbors.push(bottom);
+    function getRandomNeighbor(cell) {
+        const neighbors = getUnvisitedNeighbors(cell);
+
+        if (neighbors.length === 0) {
+            return null;
+        }
+
+        const randomIndex =
+            Math.floor(Math.random() * neighbors.length);
+
+        return neighbors[randomIndex];
     }
 
-    if (left && !left.visited) {
-        neighbors.push(left);
+    function removeWalls(current, next) {
+        const rowDifference = current.row - next.row;
+        const colDifference = current.col - next.col;
+
+        if (rowDifference === 1) {
+            current.walls.top = false;
+            next.walls.bottom = false;
+        }
+
+        if (rowDifference === -1) {
+            current.walls.bottom = false;
+            next.walls.top = false;
+        }
+
+        if (colDifference === 1) {
+            current.walls.left = false;
+            next.walls.right = false;
+        }
+
+        if (colDifference === -1) {
+            current.walls.right = false;
+            next.walls.left = false;
+        }
     }
 
-    return neighbors;
+    const stack = [];
+
+    let current = grid[0][0];
+    current.visited = true;
+
+    while (true) {
+        const next = getRandomNeighbor(current);
+
+        if (next) {
+            next.visited = true;
+
+            stack.push(current);
+
+            removeWalls(current, next);
+
+            current = next;
+        } else if (stack.length > 0) {
+            current = stack.pop();
+        } else {
+            break;
+        }
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+            drawCell(grid[row][col]);
+        }
+    }
 }
 
-function getRandomNeighbor(cell) {
-    const neighbors = getUnvisitedNeighbors(cell);
+generateMaze();
 
-    if (neighbors.length === 0) {
-        return null;
-    }
-
-    const randomIndex = Math.floor(Math.random() * neighbors.length);
-
-    return neighbors[randomIndex];
-}
-
-function removeWalls(current, next) {
-    const rowDifference = current.row - next.row;
-    const colDifference = current.col - next.col;
-
-    if (rowDifference === 1) {
-        current.walls.top = false;
-        next.walls.bottom = false;
-    }
-
-    if (rowDifference === -1) {
-        current.walls.bottom = false;
-        next.walls.top = false;
-    }
-
-    if (colDifference === 1) {
-        current.walls.left = false;
-        next.walls.right = false;
-    }
-
-    if (colDifference === -1) {
-        current.walls.right = false;
-        next.walls.left = false;
-    }
-}
-
-const stack = [];
-
-let current = grid[0][0];
-current.visited = true;
-
-while (true) {
-    const next = getRandomNeighbor(current);
-
-    if (next) {
-        next.visited = true;
-
-        stack.push(current);
-
-        removeWalls(current, next);
-
-        current = next;
-    } else if (stack.length > 0) {
-        current = stack.pop();
-    } else {
-        break;
-    }
-}
-
-for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-        drawCell(grid[row][col]);
-    }
-}
+window.addEventListener("resize", function() {
+    generateMaze();
+});
